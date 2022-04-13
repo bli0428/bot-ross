@@ -11,16 +11,14 @@ import cv2
 from scipy.spatial import KDTree
 from webcolors import CSS3_HEX_TO_NAMES, hex_to_rgb
 import pandas as pd
-from preprocessing import downsample
 
 
-
-css3_db = CSS3_HEX_TO_NAMES
-names = []
-rgb_values = []
-for color_hex, color_name in css3_db.items():
-    names.append(color_name)
-    rgb_values.append(hex_to_rgb(color_hex))
+#css3_db = CSS3_HEX_TO_NAMES
+names = ["yellow", "orange", "red", "green", "blue", "purple", "background", "background2"]
+rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
+#for color_hex, color_name in css3_db.items():
+    #names.append(color_name)
+    #rgb_values.append(hex_to_rgb(color_hex))
 
 
 def convert_rgb_to_names(rgb_tuple):
@@ -29,8 +27,14 @@ def convert_rgb_to_names(rgb_tuple):
     distance, index = kdt_db.query(rgb_tuple)
     return f'closest match: {names[index]}'
 
+def convert_rgb_to_closest(rgb_tuple):
+    # a dictionary of all the hex and their respective names in css3
+    kdt_db = KDTree(rgb_values)
+    distance, index = kdt_db.query(rgb_tuple)
+    return rgb_values[index]
+
 def main(filepath):
-    #Configure depth and color streams
+    # Configure depth and color streams
     pipeline = rs.pipeline()
     config = rs.config()
 
@@ -74,12 +78,26 @@ def main(filepath):
             # Convert images to numpy arrays
             depth_image = np.asanyarray(depth_frame.get_data())
             color_image = np.asanyarray(color_frame.get_data())
-            np.save("color-data",color_image)
             color_image_2d = np.reshape(color_image,(307200,3))
-            ci = pd.DataFrame(color_image_2d)
-            ci.to_csv("color_image.csv")
+            cv2.imwrite('original_image_1.jpeg', color_image)
+            closest_colors = []
+            for i in range(len(color_image_2d)):
+                closest = convert_rgb_to_closest(color_image_2d[i])
+                closest_colors.append(closest)
+            closest_colors = np.array(closest_colors)
+            closest_colors = np.reshape(closest_colors,(480,640,3))
+            print(closest_colors)
+            print(closest_colors.shape)
+            cv2.imwrite('closest_image_output_1.jpeg', closest_colors)
 
-            print("color: ", color_image)
+
+
+            #np.save("color-data",color_image)
+            #color_image_2d = np.reshape(color_image,(307200,3))
+            #ci = pd.DataFrame(color_image_2d)
+            #ci.to_csv("color_image.csv")
+
+            #print("color: ", color_image)
             # print("depth: ", depth_image)
             
 
@@ -117,7 +135,7 @@ def main(filepath):
     finally:
 
         # Stop streaming
-        pipeline.stop() 
+        pipeline.stop()
 
 if __name__ == '__main__':
-    main()
+    main("")
