@@ -16,7 +16,7 @@ default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119
 img = cv2.imread("original_image_1.jpeg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY_INV)[1]
 
 cv2.imshow("Thresh", thresh)
 cv2.waitKey(0)
