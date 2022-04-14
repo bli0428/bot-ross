@@ -13,10 +13,16 @@ default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119
 
 
 # 2. import one of the output camera files ("original_image...")
-img = cv2.imread("original_image_1.jpeg")
+img = cv2.imread("original_image.jpeg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+print(gray[0][0])
+
+cv2.imshow("b/w", gray)
+cv2.waitKey(0)
+
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY_INV)[1]
+thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
+#second value should depend on overall brightness
 
 cv2.imshow("Thresh", thresh)
 cv2.waitKey(0)
@@ -31,8 +37,8 @@ image = img
 for c in cnts:
 	# compute the center of the contour
 	M = cv2.moments(c)
-	cX = int(M["m10"] / M["m00"])
-	cY = int(M["m01"] / M["m00"])
+	cX = int(M["m10"] / (M["m00"]+ 1e-5))
+	cY = int(M["m01"] / (M["m00"]+ 1e-5))
 	# draw the contour and center of the shape on the image
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (255, 255, 255), -1)
