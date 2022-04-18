@@ -1,4 +1,5 @@
 import colorsys
+from sre_constants import GROUPREF_EXISTS
 import cv2
 import numpy as np
 import imutils
@@ -11,9 +12,33 @@ default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119
 # might need to check black/white another way because white seems to be when saturation is like <.25
 # and black seems to be when value is below <.35 
 
+def get_HSVcolor(cx,cy):
+	pixel = img[cx][cy]
+	hsv = colorsys.rgb_to_hsv(pixel[0]/255,pixel[1]/255,pixel[2]/255)
+	print("Hue: ", hsv[0], " converted: ",    hsv[0]*360)
+	print("Saturation: ", hsv[1])
+	print("Value: ", hsv[2   ])
+	if hsv[1] < .25:
+		return default_rgb_values[6], names[6]
+	elif hsv[2] < .20:
+		return default_rgb_values[7], names[7]
+	else:
+		if hsv[0] <= .033 or hsv[0] >= .9055:
+			return default_rgb_values[0], names [0]
+		elif .033 < hsv[0] <= .1194 :
+			return default_rgb_values[1], names [1]
+		elif .1194 < hsv[0] <= .1833 :
+			return default_rgb_values[2], names [2]
+		elif .1833 < hsv[0] <= .46 :
+			return default_rgb_values[3], names [3]
+		elif .46 < hsv[0] <= .7388 :
+			return default_rgb_values[4], names [4]
+		else:
+			return default_rgb_values[5], names [5]
+
 
 # 2. import one of the output camera files ("original_image...")
-img = cv2.imread("original_image.jpeg")
+img = cv2.imread("original_image_6.jpeg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 print(gray[0][0])
 
@@ -21,7 +46,10 @@ cv2.imshow("b/w", gray)
 cv2.waitKey(0)
 
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
+#for use with non-black background
+#thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
+#for use with black background
+thresh = cv2.threshold(blurred, 30, 255, cv2.THRESH_BINARY)[1]
 #second value should depend on overall brightness
 
 cv2.imshow("Thresh", thresh)
@@ -40,9 +68,15 @@ for c in cnts:
 	cX = int(M["m10"] / (M["m00"]+ 1e-5))
 	cY = int(M["m01"] / (M["m00"]+ 1e-5))
 	# draw the contour and center of the shape on the image
+	# rgb_val, name = get_HSVcolor(cX,cY)
+	pixel = img[cX][cY]
+	print(pixel[0])
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-	cv2.circle(image, (cX, cY), 7, (255, 255, 255), -1)
-	cv2.putText(image, "center", (cX - 20, cY - 20),
+	cv2.circle(image, (cX, cY), 7, (int(pixel[0]), int(pixel[1]), int(pixel[2])), -1)
+	rgb_val, name = get_HSVcolor(cX,cY)
+	#cv2.putText(image, "center", (cX - 20, cY - 20),
+		#cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+	cv2.putText(image, name, (cX - 20, cY - 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	# show the image
 	cv2.imshow("Image", image)
@@ -56,43 +90,45 @@ img = img.reshape((307200,3))
 
 #4. loop through all pixels and store (1) array with closest color name based on H range for pixel
 #  (2) array with the corresponding default rgb tuple for pixel 
-output = []
-colors = []
-for i in range(len(img)):
-    pixel = img[i]
-    hsv = colorsys.rgb_to_hsv(pixel[0]/255,pixel[1]/255,pixel[2]/255)
-    if hsv[1] < .25:
-        output.append(default_rgb_values[6])
-        colors.append(names[6])
-    elif hsv[2] < .25:
-        output.append(default_rgb_values[7])
-        colors.append(names[7])
-    else:
-        if hsv[0] <= .033 or hsv[0] >= .9055:
-            output.append(default_rgb_values[0])
-            colors.append(names[0])
-        elif .033 < hsv[0] <= .1194 :
-            output.append(default_rgb_values[1])
-            colors.append(names[1])
-        elif .1194 < hsv[0] <= .1833 :
-            output.append(default_rgb_values[2])
-            colors.append(names[2])
-        elif .1833 < hsv[0] <= .46 :
-            output.append(default_rgb_values[3])
-            colors.append(names[3])
-        elif .46 < hsv[0] <= .7388 :
-            output.append(default_rgb_values[4])
-            colors.append(names[4])
-        else:
-            output.append(default_rgb_values[5])
-            colors.append(names[5])
+# output = []
+# colors = []
+# for i in range(len(img)):
+#     pixel = img[i]
+#     hsv = colorsys.rgb_to_hsv(pixel[0]/255,pixel[1]/255,pixel[2]/255)
+#     if hsv[1] < .25:
+#         output.append(default_rgb_values[6])
+#         colors.append(names[6])
+#     elif hsv[2] < .25:
+#         output.append(default_rgb_values[7])
+#         colors.append(names[7])
+#     else:
+#         if hsv[0] <= .033 or hsv[0] >= .9055:
+#             output.append(default_rgb_values[0])
+#             colors.append(names[0])
+#         elif .033 < hsv[0] <= .1194 :
+#             output.append(default_rgb_values[1])
+#             colors.append(names[1])
+#         elif .1194 < hsv[0] <= .1833 :
+#             output.append(default_rgb_values[2])
+#             colors.append(names[2])
+#         elif .1833 < hsv[0] <= .46 :
+#             output.append(default_rgb_values[3])
+#             colors.append(names[3])
+#         elif .46 < hsv[0] <= .7388 :
+#             output.append(default_rgb_values[4])
+#             colors.append(names[4])
+#         else:
+#             output.append(default_rgb_values[5])
+#             colors.append(names[5])
 
-print(output)
-output = np.array(output)
-output = np.reshape(output, (480,640,3))
-print(output.shape)
+# print(output)
+# output = np.array(output)
+# output = np.reshape(output, (480,640,3))
+# print(output.shape)
+
+
 #cv2.imshow(output)
-cv2.imwrite("output3.jpeg",output)
+#cv2.imwrite("output6.jpeg",output)
 
 
 #5. reshape array of default rgb tuples to image size (480,640,3) and save as image for visualization
