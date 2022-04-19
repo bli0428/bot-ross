@@ -65,7 +65,7 @@ cnts = imutils.grab_contours(cnts)
 
 image = img
 
-img_hsv = cv2.cvtColor(img,cv2.COLOR_RGB2HSV)
+img_hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
 # loop over the contours
 for c in cnts:
@@ -97,9 +97,15 @@ for c in cnts:
 	r /= 400
 	g /= 400
 	b /= 400
-	h /= 400*360
+	h /= 400*180
 	s /= 400*360
 	v /= 400*360
+
+
+	# pixel = img[cY][cX]
+	# r,g,b = pixel
+	# h,s,v = img_hsv[cY][cX]
+
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
