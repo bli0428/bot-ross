@@ -20,7 +20,7 @@ def get_HSVcolor(h,s,v):
 	hsv = [h,s,v]
 	print("Hue: ", hsv[0], " converted: ",    hsv[0]*360)
 	print("Saturation: ", hsv[1])
-	print("Value: ", hsv[2   ])
+	print("Value: ", hsv[2])
 	if hsv[1] < .13:
 		return default_rgb_values[6], names[6]
 	elif hsv[2] < .13:
@@ -38,6 +38,7 @@ def get_HSVcolor(h,s,v):
 			return default_rgb_values[4], names [4]
 		else:
 			return default_rgb_values[5], names [5]
+		
 
 
 # 2. import one of the output camera files ("original_image...")
@@ -96,9 +97,9 @@ for c in cnts:
 	r /= 400
 	g /= 400
 	b /= 400
-	h /= 400
-	s /= 400
-	v /= 400
+	h /= 400*360
+	s /= 400*360
+	v /= 400*360
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
