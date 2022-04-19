@@ -76,6 +76,8 @@ for c in cnts:
 	# draw the contour and center of the shape on the image
 	# rgb_val, name = get_HSVcolor(cX,cY)
 	
+
+	#GETTING AVERAGE OF 400 pixels around center
 	r = 0
 	g = 0
 	b = 0
@@ -97,9 +99,9 @@ for c in cnts:
 	r /= 400
 	g /= 400
 	b /= 400
-	h /= 400*360
-	s /= 400*360
-	v /= 400*360
+	h /= 400*180 # ALSO DIVIDING THE HSV VALUES BY 180 bc cv2.cvtcolor (we belive) returns int not float
+	s /= 400*255
+	v /= 400*255
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
