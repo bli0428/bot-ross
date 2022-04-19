@@ -42,7 +42,7 @@ def get_HSVcolor(h,s,v):
 
 
 # 2. import one of the output camera files ("original_image...")
-img = cv2.imread("original_image_6.jpeg")
+img = cv2.imread("original_image_touse.jpeg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 print(gray[0][0])
 
@@ -65,7 +65,7 @@ cnts = imutils.grab_contours(cnts)
 
 image = img
 
-img_hsv = cv2.cvtColor(img,cv2.COLOR_RGB2HSV)
+img_hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
 # loop over the contours
 for c in cnts:
@@ -99,9 +99,15 @@ for c in cnts:
 	r /= 400
 	g /= 400
 	b /= 400
-	h /= 400*180 # ALSO DIVIDING THE HSV VALUES BY 180 bc cv2.cvtcolor (we belive) returns int not float
-	s /= 400*255
-	v /= 400*255
+	h /= 400*180
+	s /= 400*360
+	v /= 400*360
+
+
+	# pixel = img[cY][cX]
+	# r,g,b = pixel
+	# h,s,v = img_hsv[cY][cX]
+
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
@@ -109,6 +115,7 @@ for c in cnts:
 		#cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(image, name, (cX - 20, cY - 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+	print("Y: ", cY, "X:", cX)
 	# show the image
 	cv2.imshow("Image", image)
 	cv2.waitKey(0)
