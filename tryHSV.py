@@ -1,8 +1,8 @@
 import colorsys
-from sre_constants import GROUPREF_EXISTS
 import cv2
 import numpy as np
 import imutils
+
 # 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
 # Create a default rgb tuple for each of those colors for visualization purposes.
 names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
@@ -13,10 +13,6 @@ default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119
 # and black seems to be when value is below <.35 
 
 def get_HSVcolor(h,s,v):
-	#pixel = img[cx][cy]
-	#hsv = colorsys.rgb_to_hsv(pixel[0]/255,pixel[1]/255,pixel[2]/255)
-	#hsv = colorsys.rgb_to_hsv(r/255,g/255,b/255)
-	#hsv = colorsys.rgb_to_hsv(r,g,b)
 	hsv = [h,s,v]
 	print("Hue: ", hsv[0], " converted: ",    hsv[0]*360)
 	print("Saturation: ", hsv[1])
@@ -65,23 +61,16 @@ cnts = imutils.grab_contours(cnts)
 
 image = img
 
-img_hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-
 # loop over the contours
 for c in cnts:
 	# compute the center of the contour
 	M = cv2.moments(c)
 	cX = int(M["m10"] / (M["m00"]+ 1e-5))
 	cY = int(M["m01"] / (M["m00"]+ 1e-5))
-	# draw the contour and center of the shape on the image
-	# rgb_val, name = get_HSVcolor(cX,cY)
 	
 	r = 0
 	g = 0
 	b = 0
-	h = 0
-	s = 0
-	v = 0
 	for i in range(-10,10):
 		for j in range(-10,10):
 			newX = min(len(img[0])-1,max(0,cX+i))
@@ -90,30 +79,20 @@ for c in cnts:
 			r += pixel[0]
 			g += pixel[1]
 			b += pixel[2]
-			pixel_hsv = img_hsv[newY][newX]
-			h += pixel_hsv[0]
-			s += pixel_hsv[1]
-			v += pixel_hsv[2]
 	r /= 400
 	g /= 400
 	b /= 400
-	h /= 400*180
-	s /= 400*255
-	v /= 400*255
-
-
-	# pixel = img[cY][cX]
-	# r,g,b = pixel
-	# h,s,v = img_hsv[cY][cX]
 
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
+
+	# B and R need to be swapped
+	h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
 	rgb_val, name = get_HSVcolor(h,s,v)
-	print("RGBVAL:", rgb_val)
-	#cv2.putText(image, "center", (cX - 20, cY - 20),
-		#cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+	
 	cv2.putText(image, name, (cX - 20, cY - 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+		
 	# show the image
 	cv2.imshow("Image", image)
 	cv2.waitKey(0)
