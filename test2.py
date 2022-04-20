@@ -3,6 +3,11 @@ from sre_constants import GROUPREF_EXISTS
 import cv2
 import numpy as np
 import imutils
+from wlkata_mirobot import WlkataMirobot
+from wlkata_mirobot import WlkataMirobotTool
+arm = WlkataMirobot(portname='/dev/cu.usbserial-1410')
+arm.home()
+arm.set_tool_type(WlkataMirobotTool.FLEXIBLE_CLAW)
 # 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
 # Create a default rgb tuple for each of those colors for visualization purposes.
 names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
@@ -42,7 +47,7 @@ def get_HSVcolor(h,s,v):
 
 
 # 2. import one of the output camera files ("original_image...")
-img = cv2.imread("original_image_touse1.jpeg")
+img = cv2.imread("calibration_image.jpeg")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 print(gray[0][0])
 
@@ -53,7 +58,7 @@ blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 #for use with non-black background
 #thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
 #for use with black background
-thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+thresh = cv2.threshold(blurred, 130, 255, cv2.THRESH_BINARY)[1]
 #second value should depend on overall brightness
 
 cv2.imshow("Thresh", thresh)
@@ -111,6 +116,17 @@ for c in cnts:
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
+	if name == "yellow":
+		real_y = -.4105*cX - 17.67136 #-.62*cX-26.44 #-.682
+		real_x = -.405*cY + 282.26 #-.52*cY+332.238 #.49
+		arm.set_tool_pose(real_x,real_y,10)
+		arm.pump_suction()
+		arm.set_tool_pose(real_x,real_y, 45)
+		arm.set_tool_pose(real_x+20, 90, 10)
+		arm.pump_blowing()
+
+
+
 	#cv2.putText(image, "center", (cX - 20, cY - 20),
 		#cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(image, name, (cX - 20, cY - 20),
