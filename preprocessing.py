@@ -8,4 +8,8 @@ def downsample(img, width, length):
     # nearest neighbor interpolation looks best
     return cv2.resize(img, (length, width), fx=0.5, fy=0.5, interpolation=cv2.INTER_NEAREST)
 
-preprocessing('images/dog.jpg')
+if __name__ == '__main__':
+    img = pull_from_file("images/pink_flower.jpeg")
+    output = downsample(img, 10, 10)
+    cv2.imshow("Image", output)
+    cv2.waitKey(0)
