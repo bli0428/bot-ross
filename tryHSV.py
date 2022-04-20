@@ -6,7 +6,7 @@ import imutils
 # 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
 # Create a default rgb tuple for each of those colors for visualization purposes.
 names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
-default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
+default_rgb_values = [[255,31,31],[255,129,31], [255,249,31],[24,169,58],[24,82,169],[111,24,169],[255,255,255],[0,0,0]]
 # H_ranges = 
 # while color ranges can be determined by the hue value, 
 # might need to check black/white another way because white seems to be when saturation is like <.25
@@ -36,70 +36,70 @@ def get_HSVcolor(h,s,v):
 			return default_rgb_values[5], names [5]
 		
 
+if __name__ == '__main__':
+	# 2. import one of the output camera files ("original_image...")
+	img = cv2.imread("original_image_touse.jpeg")
+	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	print(gray[0][0])
 
-# 2. import one of the output camera files ("original_image...")
-img = cv2.imread("original_image_touse1.jpeg")
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-print(gray[0][0])
-
-cv2.imshow("b/w", gray)
-cv2.waitKey(0)
-
-blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-#for use with non-black background
-#thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
-#for use with black background
-thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
-#second value should depend on overall brightness
-
-cv2.imshow("Thresh", thresh)
-cv2.waitKey(0)
-
-cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-	cv2.CHAIN_APPROX_SIMPLE)
-cnts = imutils.grab_contours(cnts)
-
-image = img
-
-# loop over the contours
-for c in cnts:
-	# compute the center of the contour
-	M = cv2.moments(c)
-	cX = int(M["m10"] / (M["m00"]+ 1e-5))
-	cY = int(M["m01"] / (M["m00"]+ 1e-5))
-	
-
-	#GETTING AVERAGE OF 400 pixels around center
-	r = 0
-	g = 0
-	b = 0
-	for i in range(-10,10):
-		for j in range(-10,10):
-			newX = min(len(img[0])-1,max(0,cX+i))
-			newY = min(len(img)-1,max(0,cY+i))
-			pixel = img[newY][newX]
-			r += pixel[0]
-			g += pixel[1]
-			b += pixel[2]
-	r /= 400
-	g /= 400
-	b /= 400
-
-	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
-	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
-
-	# B and R need to be swapped
-	h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
-	rgb_val, name = get_HSVcolor(h,s,v)
-	
-	cv2.putText(image, name, (cX - 20, cY - 20),
-		cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-	print("Y: ", cY, "X:", cX)
-	# show the image
-	cv2.imshow("Image", image)
+	cv2.imshow("b/w", gray)
 	cv2.waitKey(0)
 
-img = img.reshape((307200,3))
+	blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+	#for use with non-black background
+	#thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
+	#for use with black background
+	thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+	#second value should depend on overall brightness
+
+	cv2.imshow("Thresh", thresh)
+	cv2.waitKey(0)
+
+	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+		cv2.CHAIN_APPROX_SIMPLE)
+	cnts = imutils.grab_contours(cnts)
+
+	image = img
+
+	# loop over the contours
+	for c in cnts:
+		# compute the center of the contour
+		M = cv2.moments(c)
+		cX = int(M["m10"] / (M["m00"]+ 1e-5))
+		cY = int(M["m01"] / (M["m00"]+ 1e-5))
+		
+
+		#GETTING AVERAGE OF 400 pixels around center
+		r = 0
+		g = 0
+		b = 0
+		for i in range(-10,10):
+			for j in range(-10,10):
+				newX = min(len(img[0])-1,max(0,cX+i))
+				newY = min(len(img)-1,max(0,cY+i))
+				pixel = img[newY][newX]
+				r += pixel[0]
+				g += pixel[1]
+				b += pixel[2]
+		r /= 400
+		g /= 400
+		b /= 400
+
+		cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+		cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
+
+		# B and R need to be swapped
+		h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
+		rgb_val, name = get_HSVcolor(h,s,v)
+		
+		cv2.putText(image, name, (cX - 20, cY - 20),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+		print("Y: ", cY, "X:", cX)
+		# show the image
+		cv2.imshow("Image", image)
+		cv2.waitKey(0)
+
+	img = img.reshape((307200,3))
 
 
 # 3. convert file to np array of rgb values
