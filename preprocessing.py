@@ -8,7 +8,7 @@ def pull_from_file(filepath):
 
 def downsample(img, width, length):
     # nearest neighbor interpolation looks best
-    return cv2.resize(img, (length, width), fx=0.5, fy=0.5, interpolation=cv2.INTER_NEAREST)
+    return cv2.resize(img, (length, width), fx=0.5, fy=0.5)
 
 if __name__ == '__main__':
     img = pull_from_file("images/pink_flower.jpeg")
