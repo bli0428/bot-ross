@@ -98,8 +98,8 @@ for c in cnts:
 	g /= 400
 	b /= 400
 	h /= 400*180
-	s /= 400*360
-	v /= 400*360
+	s /= 400*255
+	v /= 400*255
 
 
 	# pixel = img[cY][cX]
@@ -109,6 +109,7 @@ for c in cnts:
 	cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
 	cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
 	rgb_val, name = get_HSVcolor(h,s,v)
+	print("RGBVAL:", rgb_val)
 	#cv2.putText(image, "center", (cX - 20, cY - 20),
 		#cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(image, name, (cX - 20, cY - 20),
