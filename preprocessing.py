@@ -27,4 +27,4 @@ if __name__ == '__main__':
     print(output.shape, output.dtype)
     print(new_output.shape, new_output.dtype)
     cv2.imshow("Converted", new_output)
-    cv2.waitKey(0)
+    cv2.imwrite("converted_flower.jpg", new_output)
