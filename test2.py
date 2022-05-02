@@ -17,6 +17,7 @@ end_locations = [[[229.9, 128.4, 19.8], [229.5, 103.1, 17.9], [229.4, 72.9, 16.1
 [[203.4, 132, 19.2],[203.3, 106.8, 17.3], [203, 76.4, 15.5], [202.7, 51.2, 14]], [[176.5, 131.9, 18], 
 [176.2, 106.6, 15.8],[173, 81.1, 16.7], [173, 50.8, 15.5]], [[144.9, 135, 14.1], [144.5, 109.9, 17.6], 
 [144.2, 79.7, 16], [143.8, 52.8, 16.7]]]
+arm = WlkataMirobot(portname='/dev/cu.usbserial-1410')
 # H_ranges = 
 # while color ranges can be determined by the hue value, 
 # might need to check black/white another way because white seems to be when saturation is like <.25
@@ -53,7 +54,6 @@ def get_HSVcolor(h,s,v):
 def block_picking(img, color, location): 
     # 2. import one of the output camera files ("original_image...")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    print(gray[0][0])
 
     cv2.imshow("b/w", gray)
     cv2.waitKey(0)
@@ -134,13 +134,11 @@ def block_picking(img, color, location):
 
 
 def main(file):
-    arm = WlkataMirobot(portname='/dev/cu.usbserial-1410')
     arm.home()
-    arm.set_tool_type(WlkataMirobotTool.FLEXIBLE_CLAW)
+    arm.set_tool_type(WlkataMirobotTool.SUCTION_CUP)
     
     img = pull_from_file(file) 
-    output = downsample(img,10,10)
-
+    output = downsample(img,4,4)
 
     # Configure depth and color streams
     pipeline = rs.pipeline()
