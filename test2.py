@@ -8,11 +8,13 @@ from wlkata_mirobot import WlkataMirobotTool
 import pyrealsense2 as rs
 import pandas as pd
 from preprocessing import downsample, pull_from_file
+import time
 
 
 # 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
 # Create a default rgb tuple for each of those colors for visualization purposes.
 names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
+default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
 end_locations = [[[229.9, 128.4, 19.8], [229.5, 103.1, 17.9], [229.4, 72.9, 16.1], [229.2, 47.7, 15.1]], 
 [[203.4, 132, 19.2],[203.3, 106.8, 17.3], [203, 76.4, 15.5], [202.7, 51.2, 14]], [[176.5, 131.9, 18], 
 [176.2, 106.6, 15.8],[173, 81.1, 16.7], [173, 50.8, 15.5]], [[144.9, 135, 14.1], [144.5, 109.9, 17.6], 
@@ -62,7 +64,7 @@ def block_picking(img, color, location):
     #for use with non-black background
     #thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
     #for use with black background
-    thresh = cv2.threshold(blurred, 130, 255, cv2.THRESH_BINARY)[1]
+    thresh = cv2.threshold(blurred, 40, 255, cv2.THRESH_BINARY)[1]
     #second value should depend on overall brightness
 
     cv2.imshow("Thresh", thresh)
@@ -113,17 +115,30 @@ def block_picking(img, color, location):
         v /= 400*360
 
         cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+        area = cv2.contourArea(c)
         cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
         rgb_val, name = get_HSVcolor(h,s,v)
-        if name == color:
+        if name == color and area > 2000:
             real_y = -.4068*cX - 18.07605 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
             real_x = -.408*cY + 284.15 #-.52*cY+332.238 #.49
-            arm.set_tool_pose(real_x,real_y,10)
+            arm.set_tool_pose(real_x,real_y,60)
+            arm.set_tool_pose(real_x,real_y,30)
+            time.sleep(1)
+            arm.set_tool_pose(real_x,real_y,19, speed=25)
             arm.pump_suction()
-            arm.set_tool_pose(real_x,real_y, 45)
-            arm.set_tool_pose(location[0], location[1], location[2]) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
-            arm.pump_blowing()
-            arm.set_tool_pose(location[0], location[1], 45)
+            arm.set_tool_pose(real_x,real_y, 60)
+            arm.set_tool_pose(location[0], location[1], 60) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            arm.set_tool_pose(location[0], location[1], 20) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            arm.pump_off()
+            arm.set_tool_pose(location[0], location[1], 60)
+
+            cv2.putText(image, name, (cX - 20, cY - 20),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            print("Y: ", cY, "X:", cX)
+            # show the image
+            cv2.imshow("Image", image)
+            cv2.waitKey(0)
+            break
 
         cv2.putText(image, name, (cX - 20, cY - 20),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
@@ -136,9 +151,11 @@ def block_picking(img, color, location):
 def main(file):
     arm.home()
     arm.set_tool_type(WlkataMirobotTool.SUCTION_CUP)
+    arm.set_speed(500)
     
     img = pull_from_file(file) 
     output = downsample(img,4,4)
+    cv2.imshow("downsampled", output)
 
     # Configure depth and color streams
     pipeline = rs.pipeline()
@@ -159,7 +176,7 @@ def main(file):
         print("The demo requires Depth camera with Color sensor")
         exit(0)
 
-    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    #config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
     if device_product_line == 'L500':
         config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
@@ -174,43 +191,23 @@ def main(file):
             for j in range(4):
 
                 [r,g,b] = output[i][j]
-                h,s,v = colorsys.rgb_to_hsv(r/255, g/255, b/255)
+                h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
                 rgb, name = get_HSVcolor(h,s,v)
 
                 color = name
+                if color == "background_white" or color == "background_black":
+                    color = "purple"
+                print("SEARCHING FOR...", color)
+                print("INDEX: ", i, ", ", j)
                 end_location = end_locations[i][j]
 
-                # Wait for a coherent pair of frames: depth and color
+               
                 frames = pipeline.wait_for_frames()
-                depth_frame = frames.get_depth_frame()
                 color_frame = frames.get_color_frame()
-                if not depth_frame or not color_frame:
-                    continue
 
-                # Convert images to numpy arrays
-                depth_image = np.asanyarray(depth_frame.get_data())
                 color_image = np.asanyarray(color_frame.get_data())
-                #color_image_2d = np.reshape(color_image,(307200,3))
+                color_image_2d = np.reshape(color_image,(307200,3))
 
-                # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-                depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-
-                depth_colormap_dim = depth_colormap.shape
-                color_colormap_dim = color_image.shape
-
-                # If depth and color resolutions are different, resize color image to match depth image for display
-                if depth_colormap_dim != color_colormap_dim:
-                    resized_color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]), interpolation=cv2.INTER_AREA)
-                    images = np.hstack((resized_color_image, depth_colormap))
-                else:
-                    images = np.hstack((color_image, depth_colormap))
-
-                # Show images
-                cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-                cv2.imshow('RealSense', images)
-                Key = cv2.waitKey(1)
-                if Key == 27:
-                    break
 
                 block_picking(color_image, color, end_location)
 
@@ -220,4 +217,4 @@ def main(file):
         pipeline.stop()
 
 if __name__ == '__main__':
-    main("images/pink_flower.jpeg")
+    main("images/pumpkin.png")
