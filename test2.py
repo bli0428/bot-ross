@@ -116,8 +116,8 @@ def block_picking(img, color, location):
         cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
         rgb_val, name = get_HSVcolor(h,s,v)
         if name == color:
-            real_y = -.4105*cX - 17.67136 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
-            real_x = -.405*cY + 282.26 #-.52*cY+332.238 #.49
+            real_y = -.4068*cX - 18.07605 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
+            real_x = -.408*cY + 284.15 #-.52*cY+332.238 #.49
             arm.set_tool_pose(real_x,real_y,10)
             arm.pump_suction()
             arm.set_tool_pose(real_x,real_y, 45)

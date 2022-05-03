@@ -38,7 +38,7 @@ def get_HSVcolor(h,s,v):
 
 if __name__ == '__main__':
 	# 2. import one of the output camera files ("original_image...")
-	img = cv2.imread("original_image_touse.jpeg")
+	img = cv2.imread("calibration_may3.jpeg")
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	print(gray[0][0])
 
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 	#for use with non-black background
 	#thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
 	#for use with black background
-	thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+	thresh = cv2.threshold(blurred, 140, 255, cv2.THRESH_BINARY)[1]
 	#second value should depend on overall brightness
 
 	cv2.imshow("Thresh", thresh)
