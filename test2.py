@@ -13,11 +13,12 @@ from preprocessing import downsample, pull_from_file
 # 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
 # Create a default rgb tuple for each of those colors for visualization purposes.
 names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
+default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
 end_locations = [[[229.9, 128.4, 19.8], [229.5, 103.1, 17.9], [229.4, 72.9, 16.1], [229.2, 47.7, 15.1]], 
 [[203.4, 132, 19.2],[203.3, 106.8, 17.3], [203, 76.4, 15.5], [202.7, 51.2, 14]], [[176.5, 131.9, 18], 
 [176.2, 106.6, 15.8],[173, 81.1, 16.7], [173, 50.8, 15.5]], [[144.9, 135, 14.1], [144.5, 109.9, 17.6], 
 [144.2, 79.7, 16], [143.8, 52.8, 16.7]]]
-arm = WlkataMirobot(portname='/dev/cu.usbserial-1410')
+arm = WlkataMirobot(portname='/dev/cu.usbserial-1450')
 # H_ranges = 
 # while color ranges can be determined by the hue value, 
 # might need to check black/white another way because white seems to be when saturation is like <.25
@@ -220,4 +221,4 @@ def main(file):
         pipeline.stop()
 
 if __name__ == '__main__':
-    main("images/pink_flower.jpeg")
+    main("images/pumpkin.png")
