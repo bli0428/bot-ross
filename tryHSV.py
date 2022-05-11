@@ -38,7 +38,7 @@ def get_HSVcolor(h,s,v):
 
 if __name__ == '__main__':
 	# 2. import one of the output camera files ("original_image...")
-	img = cv2.imread("calib-image.jpeg")
+	img = cv2.imread("calibration_may4.jpeg")
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	print(gray[0][0])
 

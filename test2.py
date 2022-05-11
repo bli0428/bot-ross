@@ -1,4 +1,5 @@
 import colorsys
+from logging.config import valid_ident
 from sre_constants import GROUPREF_EXISTS
 import cv2
 import numpy as np
@@ -32,22 +33,22 @@ def get_HSVcolor(h,s,v):
     #hsv = colorsys.rgb_to_hsv(r,g,b)
     hsv = [h,s,v]
     print("Hue: ", hsv[0], " converted: ",    hsv[0]*360)
-    print("Saturation: ", hsv[1])
-    print("Value: ", hsv[2])
+    #print("Saturation: ", hsv[1])
+    #print("Value: ", hsv[2])
     if hsv[1] < .13:
         return default_rgb_values[6], names[6]
     elif hsv[2] < .13:
         return default_rgb_values[7], names[7]
     else:
-        if hsv[0] <= 18/360 or hsv[0] >= 342/360: #red
+        if 0 <= hsv[0] <= 18/360 or 1 >= hsv[0] >= 331/360: #red
             return default_rgb_values[0], names [0]
-        elif 18/360 < hsv[0] <= 38/360 : #orange
+        elif 18/360 < hsv[0] <= 42/360 : #orange
             return default_rgb_values[1], names [1]
         elif 38/360 < hsv[0] <= 66/360 : #yellow
             return default_rgb_values[2], names [2]
         elif 67/360 < hsv[0] <= 169/360 : #green
             return default_rgb_values[3], names [3]
-        elif 169/360 < hsv[0] <= 257/360 : #blue
+        elif 170/360 < hsv[0] <= 257/360 : #blue
             return default_rgb_values[4], names [4]
         else:
             return default_rgb_values[5], names [5]
@@ -55,16 +56,17 @@ def get_HSVcolor(h,s,v):
 
 def block_picking(img, color, location): 
     # 2. import one of the output camera files ("original_image...")
+    print("in block picking")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    cv2.imshow("b/w", gray)
-    cv2.waitKey(0)
+    #cv2.imshow("b/w", gray)
+    #cv2.waitKey(0)
 
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     #for use with non-black background
     #thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
     #for use with black background
-    thresh = cv2.threshold(blurred, 40, 255, cv2.THRESH_BINARY)[1]
+    thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY)[1]
     #second value should depend on overall brightness
 
     cv2.imshow("Thresh", thresh)
@@ -98,7 +100,7 @@ def block_picking(img, color, location):
         for i in range(-10,10):
             for j in range(-10,10):
                 newX = min(len(img[0])-1,max(0,cX+i))
-                newY = min(len(img)-1,max(0,cY+i))
+                newY = min(len(img)-1,max(0,cY+j))
                 pixel = img[newY][newX]
                 r += pixel[0]
                 g += pixel[1]
@@ -110,42 +112,45 @@ def block_picking(img, color, location):
         r /= 400
         g /= 400
         b /= 400
-        h /= 400*180
-        s /= 400*360
-        v /= 400*360
+        h /= (400*179)
+        s /= (400*255) # was 360
+        v /= (400*255) # was 360
 
         cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
         area = cv2.contourArea(c)
         cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
         rgb_val, name = get_HSVcolor(h,s,v)
-        if name == color and area > 2000:
-            real_y = -.4068*cX - 18.07605 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
-            real_x = -.408*cY + 284.15 #-.52*cY+332.238 #.49
-            arm.set_tool_pose(real_x,real_y,60)
-            arm.set_tool_pose(real_x,real_y,30)
-            time.sleep(1)
-            arm.set_tool_pose(real_x,real_y,19, speed=25)
-            arm.pump_suction()
-            arm.set_tool_pose(real_x,real_y, 60)
-            arm.set_tool_pose(location[0], location[1], 60) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
-            arm.set_tool_pose(location[0], location[1], 20) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
-            arm.pump_off()
-            arm.set_tool_pose(location[0], location[1], 60)
+        if name != "background_white" and name != "background_black" and area > 2000:
+            # center, params, rotation = cv2.minAreaRect(c)å
+            # real_y = -.39156*cX-15.5#-.4068*cX -19#- 14.0149 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
+            # real_x = -.3765*cY+285#-.389*cY + 280#278.343 #-.52*cY+332.238 #.49
+            # arm.set_joint_angle({6:0})
+            # arm.set_tool_pose(real_x,real_y,60)
+            # arm.set_tool_pose(real_x,real_y,30)
+            # time.sleep(1)
+            # arm.set_tool_pose(real_x,real_y,19, speed=25)
+            # arm.pump_suction()
+            # arm.set_tool_pose(real_x,real_y, 60)
+            # arm.set_tool_pose(location[0], location[1], 60) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            # if rotation > 20 and 90 - rotation > 20: 
+            #     arm.set_joint_angle({6:90-rotation})
+            # arm.set_tool_pose(location[0], location[1], 20) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            # arm.pump_off()
+            # arm.set_tool_pose(location[0], location[1], 60)
 
             cv2.putText(image, name, (cX - 20, cY - 20),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            
             print("Y: ", cY, "X:", cX)
+            #print("Center: ", center)
+            #print("Width, height: ", params)
+            #print("Angle of rotation: ", rotation)
+            print("RGB: ", [r,g,b])
+            print("HSV: ", [h,s,v])
             # show the image
             cv2.imshow("Image", image)
             cv2.waitKey(0)
             break
-
-        cv2.putText(image, name, (cX - 20, cY - 20),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        print("Y: ", cY, "X:", cX)
-        # show the image
-        cv2.imshow("Image", image)
-        cv2.waitKey(0)
 
 
 def main(file):
@@ -185,18 +190,20 @@ def main(file):
 
     # Start streaming
     pipeline.start(config)
+    time.sleep(5)
 
     try:
         for i in range(4):
             for j in range(4):
+                time.sleep(2)
 
                 [r,g,b] = output[i][j]
                 h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
                 rgb, name = get_HSVcolor(h,s,v)
 
                 color = name
-                if color == "background_white" or color == "background_black":
-                    color = "purple"
+                #if color == "background_white" or color == "background_black":
+                    #continue
                 print("SEARCHING FOR...", color)
                 print("INDEX: ", i, ", ", j)
                 end_location = end_locations[i][j]
@@ -206,10 +213,10 @@ def main(file):
                 color_frame = frames.get_color_frame()
 
                 color_image = np.asanyarray(color_frame.get_data())
-                color_image_2d = np.reshape(color_image,(307200,3))
 
-
+                print("before block picking:", i,j)
                 block_picking(color_image, color, end_location)
+                print("after block picking:", i,j)
 
     finally:
 
@@ -217,4 +224,4 @@ def main(file):
         pipeline.stop()
 
 if __name__ == '__main__':
-    main("images/pumpkin.png")
+    main("images/winnie.png")
