@@ -1,39 +1,174 @@
-## License: Apache 2.0. See LICENSE file in root directory.
-## Copyright(c) 2015-2017 Intel Corporation. All Rights Reserved.
-
-###############################################
-##      Open CV and Numpy integration        ##
-###############################################
-
-import pyrealsense2 as rs
-import numpy as np
+import colorsys
+from logging.config import valid_ident
+from sre_constants import GROUPREF_EXISTS
 import cv2
-from scipy.spatial import KDTree
-from webcolors import CSS3_HEX_TO_NAMES, hex_to_rgb
+import numpy as np
+import imutils
+from wlkata_mirobot import WlkataMirobot
+from wlkata_mirobot import WlkataMirobotTool
+import pyrealsense2 as rs
 import pandas as pd
+from preprocessing import downsample, pull_from_file
+import time
 
 
-#css3_db = CSS3_HEX_TO_NAMES
-names = ["yellow", "orange", "red", "green", "blue", "purple", "background", "background2"]
-rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
-#for color_hex, color_name in css3_db.items():
-    #names.append(color_name)
-    #rgb_values.append(hex_to_rgb(color_hex))
+# 1. Establish range of H values for colors: red, orange, yellow, blue, green purple, light background (white), dark background (black)
+# Create a default rgb tuple for each of those colors for visualization purposes.
+names = ["red","orange","yellow","green","blue","purple","background_white", "background_black"]
+default_rgb_values = [[254,231,31],[254,142,31], [241,33,17],[25,171,37],[16,119,161],[184,55,185],[255,255,255],[0,0,0]]
+end_locations = [[[229.9, 128.4, 19.8], [229.5, 103.1, 17.9], [229.4, 72.9, 16.1], [229.2, 47.7, 15.1]], 
+[[203.4, 132, 19.2],[203.3, 106.8, 17.3], [203, 76.4, 15.5], [202.7, 51.2, 14]], [[176.5, 131.9, 18], 
+[176.2, 106.6, 15.8],[173, 81.1, 16.7], [173, 50.8, 15.5]], [[144.9, 135, 14.1], [144.5, 109.9, 17.6], 
+[144.2, 79.7, 16], [143.8, 52.8, 16.7]]]
+arm = WlkataMirobot(portname='/dev/cu.usbserial-1410')
+# H_ranges = 
+# while color ranges can be determined by the hue value, 
+# might need to check black/white another way because white seems to be when saturation is like <.25
+# and black seems to be when value is below <.35 
+
+def get_HSVcolor(h,s,v):
+    #pixel = img[cx][cy]
+    #hsv = colorsys.rgb_to_hsv(pixel[0]/255,pixel[1]/255,pixel[2]/255)
+    #hsv = colorsys.rgb_to_hsv(r/255,g/255,b/255)
+    #hsv = colorsys.rgb_to_hsv(r,g,b)
+    hsv = [h,s,v]
+    print("Hue: ", hsv[0], " converted: ",    hsv[0]*360)
+    #print("Saturation: ", hsv[1])
+    #print("Value: ", hsv[2])
+    if hsv[1] < .13:
+        return default_rgb_values[6], names[6]
+    elif hsv[2] < .13:
+        return default_rgb_values[7], names[7]
+    else:
+        if 0 <= hsv[0] <= 18/360 or 1 >= hsv[0] >= 328/360: #red - was above 331
+            return default_rgb_values[0], names [0]
+        elif 18/360 < hsv[0] <= 42/360 : #orange
+            return default_rgb_values[1], names [1]
+        elif 39/360 < hsv[0] <= 66/360 : #yellow
+            return default_rgb_values[2], names [2]
+        elif 67/360 < hsv[0] <= 169/360 : #green
+            return default_rgb_values[3], names [3]
+        elif 170/360 < hsv[0] <= 257/360 : #blue
+            return default_rgb_values[4], names [4]
+        else:
+            return default_rgb_values[5], names [5]
+        
+
+def block_picking(img, color, location): 
+    # 2. import one of the output camera files ("original_image...")
+    print("in block picking")
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    #cv2.imshow("b/w", gray)
+    #cv2.waitKey(0)
+
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    #for use with non-black background
+    #thresh = cv2.threshold(blurred, 1.86*gray[0][0]-237.87, 255, cv2.THRESH_BINARY_INV)[1]
+    #for use with black background
+    thresh = cv2.threshold(blurred, 43, 255, cv2.THRESH_BINARY)[1]
+    #second value should depend on overall brightness
+
+    cv2.imshow("Thresh", thresh)
+    cv2.waitKey(0)
+
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+
+    image = img
+
+    img_hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+
+    # loop over the contours
+    for c in cnts:
+        # compute the center of the contour
+        M = cv2.moments(c)
+        cX = int(M["m10"] / (M["m00"]+ 1e-5))
+        cY = int(M["m01"] / (M["m00"]+ 1e-5))
+        # draw the contour and center of the shape on the image
+        # rgb_val, name = get_HSVcolor(cX,cY)
+        
+
+        #GETTING AVERAGE OF 400 pixels around center
+        r = 0
+        g = 0
+        b = 0
+        h = 0
+        s = 0
+        v = 0
+        for i in range(-10,10):
+            for j in range(-10,10):
+                newX = min(len(img[0])-1,max(0,cX+i))
+                newY = min(len(img)-1,max(0,cY+j))
+                pixel = img[newY][newX]
+                r += pixel[0]
+                g += pixel[1]
+                b += pixel[2]
+                h_curr,s_curr,v_curr = colorsys.rgb_to_hsv(b/255, g/255, r/255)
+                #pixel_hsv = img_hsv[newY][newX]
+                #h += pixel_hsv[0]
+                #s += pixel_hsv[1]
+                #v += pixel_hsv[2]
+                h += h_curr
+                s += s_curr
+                v += v_curr
+        r /= 400
+        g /= 400
+        b /= 400
+        h /= 400
+        s /= 400
+        v /= 400
+        #h /= (400*179)
+        #s /= (400*255) # was 360
+        #v /= (400*255) # was 360
+
+        cv2.drawContours(image, [c], -1, (0, 255, 0), 2)
+        area = cv2.contourArea(c)
+        rgb_val, name = get_HSVcolor(h,s,v)
+        if name == color and area > 2000:
+            center, params, rotation = cv2.minAreaRect(c)
+            real_y = -.39316*cX-18.2#-.4068*cX -19#- 14.0149 #-.62*cX-26.44 #-.682 - NEED TO RECALIBRATE THIS
+            real_x = -.3779*cY+284#-.389*cY + 280#278.343 #-.52*cY+332.238 #.49
+            #arm.set_joint_angle({6:0})
+            arm.set_tool_pose(real_x,real_y,60)
+            arm.set_tool_pose(real_x,real_y,30)
+            time.sleep(1)
+            arm.set_tool_pose(real_x,real_y,17.2, speed=25)
+            arm.pump_suction()
+            arm.set_tool_pose(real_x,real_y, 60)
+            arm.set_tool_pose(location[0], location[1], 60) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            #if rotation > 20 and 90 - rotation > 20: 
+                #arm.set_joint_angle({6:90-rotation})
+            arm.set_tool_pose(location[0], location[1], 19) # NOTE CAN CHANGE LAST VALUE TO 10 if we don't want to use the different depth values 
+            arm.pump_off()
+            arm.set_tool_pose(location[0], location[1], 60)
+
+            cv2.putText(image, name, (cX - 20, cY - 20),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            cv2.circle(image, (cX, cY), 7, (int(r), int(g), int(b)), -1)
+            
+            print("Y: ", cY, "X:", cX)
+            #print("Center: ", center)
+            #print("Width, height: ", params)
+            #print("Angle of rotation: ", rotation)
+            #print("RGB: ", [r,g,b])
+            #print("HSV: ", [h,s,v])
+            # show the image
+            cv2.imshow("Image", image)
+            cv2.waitKey(0)
+            break
 
 
-def convert_rgb_to_names(rgb_tuple):
-    # a dictionary of all the hex and their respective names in css3
-    kdt_db = KDTree(rgb_values)
-    distance, index = kdt_db.query(rgb_tuple)
-    return f'closest match: {names[index]}'
+def main(file):
+    arm.home()
+    arm.set_tool_type(WlkataMirobotTool.SUCTION_CUP)
+    arm.set_speed(500)
+    
+    img = pull_from_file(file) 
+    output = downsample(img,4,4)
+    cv2.imshow("downsampled", output)
 
-def convert_rgb_to_closest(rgb_tuple):
-    # a dictionary of all the hex and their respective names in css3
-    kdt_db = KDTree(rgb_values)
-    distance, index = kdt_db.query(rgb_tuple)
-    return rgb_values[index]
-
-def main(filepath):
     # Configure depth and color streams
     pipeline = rs.pipeline()
     config = rs.config()
@@ -53,7 +188,7 @@ def main(filepath):
         print("The demo requires Depth camera with Color sensor")
         exit(0)
 
-    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    #config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 
     if device_product_line == 'L500':
         config.enable_stream(rs.stream.color, 960, 540, rs.format.bgr8, 30)
@@ -62,75 +197,33 @@ def main(filepath):
 
     # Start streaming
     pipeline.start(config)
-
-    banana = True
+    time.sleep(5)
 
     try:
-        while banana:
+        for i in range(4):
+            for j in range(4):
+                time.sleep(2)
 
-            # Wait for a coherent pair of frames: depth and color
-            frames = pipeline.wait_for_frames()
-            depth_frame = frames.get_depth_frame()
-            color_frame = frames.get_color_frame()
-            if not depth_frame or not color_frame:
-                continue
+                [r,g,b] = output[i][j]
+                h,s,v = colorsys.rgb_to_hsv(b/255, g/255, r/255)
+                rgb, name = get_HSVcolor(h,s,v)
 
-            # Convert images to numpy arrays
-            depth_image = np.asanyarray(depth_frame.get_data())
-            color_image = np.asanyarray(color_frame.get_data())
-            color_image_2d = np.reshape(color_image,(307200,3))
-            cv2.imwrite('original_image_1.jpeg', color_image)
-            closest_colors = []
-            for i in range(len(color_image_2d)):
-                closest = convert_rgb_to_closest(color_image_2d[i])
-                closest_colors.append(closest)
-            closest_colors = np.array(closest_colors)
-            closest_colors = np.reshape(closest_colors,(480,640,3))
-            print(closest_colors)
-            print(closest_colors.shape)
-            cv2.imwrite('closest_image_output_1.jpeg', closest_colors)
+                color = name
+                if color == "background_white" or color == "background_black":
+                    continue
+                print("SEARCHING FOR...", color)
+                print("INDEX: ", i, ", ", j)
+                end_location = end_locations[i][j]
 
+               
+                frames = pipeline.wait_for_frames()
+                color_frame = frames.get_color_frame()
 
+                color_image = np.asanyarray(color_frame.get_data())
 
-            #np.save("color-data",color_image)
-            #color_image_2d = np.reshape(color_image,(307200,3))
-            #ci = pd.DataFrame(color_image_2d)
-            #ci.to_csv("color_image.csv")
-
-            #print("color: ", color_image)
-            # print("depth: ", depth_image)
-            
-
-            # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
-            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-
-            depth_colormap_dim = depth_colormap.shape
-            color_colormap_dim = color_image.shape
-            #print(color_image.shape)
-            # dimensions: 480, 640, 3
-            #print("0,0: ", convert_rgb_to_names(color_image[0][0]))
-            #print("240,320: ", convert_rgb_to_names(color_image[240][320]))
-            #print("100,150: ", convert_rgb_to_names(color_image[100][150]))
-            #print("50,90: ", convert_rgb_to_names(color_image[50][90]))
-            #print("300,580: ", convert_rgb_to_names(color_image[300][580]))
-        
-
-
-            # If depth and color resolutions are different, resize color image to match depth image for display
-            if depth_colormap_dim != color_colormap_dim:
-                resized_color_image = cv2.resize(color_image, dsize=(depth_colormap_dim[1], depth_colormap_dim[0]), interpolation=cv2.INTER_AREA)
-                images = np.hstack((resized_color_image, depth_colormap))
-            else:
-                images = np.hstack((color_image, depth_colormap))
-
-            # Show images
-            cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-            cv2.imshow('RealSense', images)
-            Key = cv2.waitKey(1)
-            if Key == 27:
-                break
-
-            banana = False
+                print("before block picking:", i,j)
+                block_picking(color_image, color, end_location)
+                print("after block picking:", i,j)
 
     finally:
 
@@ -138,4 +231,4 @@ def main(filepath):
         pipeline.stop()
 
 if __name__ == '__main__':
-    main("")
+    main("images/pumpkin.png")
